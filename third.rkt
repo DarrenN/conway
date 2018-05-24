@@ -94,6 +94,7 @@
 
 (define (main)
   (define t (big-bang (world FIELD (freeze CANVAS))
+                      (display-mode 'fullscreen)
                       (on-tick tick)
                       (to-draw draw)))
   0)
