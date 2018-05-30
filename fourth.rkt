@@ -2,6 +2,8 @@
 
 (require 2htdp/image
          2htdp/universe
+         data/ring-buffer
+         openssl/sha1
          racket/function
          racket/list
          racket/vector)
@@ -25,12 +27,25 @@
 (define ALIVE (cons 1 "black"))
 (define DEAD (cons 0 "white"))
 
+(define OUTP (open-output-string))
+
+(define SHOW-LABELS #f)
+
+(define rb (empty-ring-buffer 3))
+
+;; [Effect]
+;; (-> void)
+;; Reset the ring-buffer to "0" "1" "2"
+(define (reset-buffer!)
+  (for ([i (in-range 3)])
+    (ring-buffer-push! rb (number->string i))))
+
 ;; (-> vector?)
 ;; Pre-load a vector of vectors with ALIVE/DEAD
 (define (make-random-cells)
   (for/vector ([y Y-AXIS])
     (for/vector ([x X-AXIS])
-      (if (zero? (modulo (random 5) 4))
+      (if (zero? (modulo (random 21) 20))
         ALIVE DEAD))))
 
 ;; (-> real? real? vector? real?)
@@ -74,6 +89,7 @@
   (for/vector ([x X-AXIS])
     (define cell (vector-ref row x))
     (define cv (car cell))
+    (write (number->string cv) OUTP)
     (define neighbors (get-neighbors x y cells))
     (cond
       [(and (= cv 1) (< neighbors 2)) DEAD]
@@ -87,29 +103,67 @@
   (define ls (vector->list (vector-map cdr row)))
   (scale CELL (color-list->bitmap ls WIDTH-RANGE 1)))
 
+(define (push-cell-state!)
+  (ring-buffer-push!
+   rb (sha1
+       (open-input-string
+        (bytes->string/utf-8
+         (get-output-bytes OUTP #t) #\?)))))
+
+(define (create-state-labels)
+  (above
+     (text (ring-buffer-ref rb 0) 16 "red")
+     (text (ring-buffer-ref rb 1) 16 "blue")
+     (text (ring-buffer-ref rb 2) 16 "red")))
+
 ;; (-> vector? vector?)
 ;; On each tick zip over the vectors and apply rules, switching cell
 ;; state depending on neighbor conditions. Returns a new vector.
 (define (tick cells)
-  (for/vector ([y Y-AXIS])
-    (apply-rules cells (vector-ref cells y) y)))
+  ;; If we're in a stable oscillation then reset the buffer and scramble
+  ;; the cells to "start over"
+  (define cs (if (check-buffer cells)
+                 (begin
+                   (reset-buffer!)
+                   (make-random-cells))
+                 cells))
 
+  (for/vector ([y Y-AXIS])
+    (apply-rules cs (vector-ref cs y) y)))
+
+;; [Effect]
 ;; (-> vector? bitmap?)
-;; Take the cells vector and convert to a bitmap for display
+;; Take the cells vector and convert to a bitmap for display - also computes the
+;; SHA1 of the cell state and pushes into a ring-buffer
 (define (draw cells)
-  (for/fold ([canvas CANVAS])
-            ([y-index Y-AXIS])
-    (place-image
-     (make-row-bitmap (vector-ref cells y-index))
-     (/ WIDTH 2)
-     (+ (* y-index CELL) (/ CELL 2))
-     canvas)))
+  (push-cell-state!)
+
+  (define new-image
+    (for/fold ([canvas CANVAS])
+              ([y-index Y-AXIS])
+      (place-image
+       (make-row-bitmap (vector-ref cells y-index))
+       (/ WIDTH 2)
+       (+ (* y-index CELL) (/ CELL 2))
+       canvas)))
+
+  (cond
+    [SHOW-LABELS (place-image (create-state-labels) (/ WIDTH 2) 30 new-image)]
+    [else new-image]))
+
+(define (check-buffer cells)
+  (equal? (ring-buffer-ref rb 0) (ring-buffer-ref rb 2)))
 
 (define (main)
   (define t (big-bang (make-random-cells)
                       ;(display-mode 'fullscreen)
+                      ;(stop-when check-buffer)
                       (on-tick tick)
                       (to-draw draw)))
   0)
+
+
+;; (for ([i (in-range 10)])
+;;   (time (draw (tick (make-random-cells)))))
 
 (main)
