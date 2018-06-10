@@ -11,7 +11,7 @@
 (define WIDTH 1020)
 (define HEIGHT 600)
 (define CANVAS (freeze (rectangle WIDTH HEIGHT "solid" "white")))
-(define CELL 20) ;; giant blocks for raspi
+(define CELL 15) ;; giant blocks for raspi
 
 (define WIDTH-RANGE (/ WIDTH CELL))
 (define HEIGHT-RANGE (/ HEIGHT CELL))
