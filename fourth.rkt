@@ -8,10 +8,10 @@
          racket/list
          racket/vector)
 
-(define WIDTH 1024)
+(define WIDTH 1020)
 (define HEIGHT 600)
 (define CANVAS (freeze (rectangle WIDTH HEIGHT "solid" "white")))
-(define CELL 8)
+(define CELL 20) ;; giant blocks for raspi
 
 (define WIDTH-RANGE (/ WIDTH CELL))
 (define HEIGHT-RANGE (/ HEIGHT CELL))
@@ -45,8 +45,8 @@
 (define (make-random-cells)
   (for/vector ([y Y-AXIS])
     (for/vector ([x X-AXIS])
-      (if (zero? (modulo (random 21) 20))
-        ALIVE DEAD))))
+      (if (zero? (modulo (random 11) 10))
+          ALIVE DEAD))))
 
 ;; (-> real? real? vector? real?)
 ;; Return cell-state value for cell at x y but allow to wrap around edges
@@ -112,9 +112,9 @@
 
 (define (create-state-labels)
   (above
-     (text (ring-buffer-ref rb 0) 16 "red")
-     (text (ring-buffer-ref rb 1) 16 "blue")
-     (text (ring-buffer-ref rb 2) 16 "red")))
+   (text (ring-buffer-ref rb 0) 16 "red")
+   (text (ring-buffer-ref rb 1) 16 "blue")
+   (text (ring-buffer-ref rb 2) 16 "red")))
 
 ;; (-> vector? vector?)
 ;; On each tick zip over the vectors and apply rules, switching cell
@@ -156,14 +156,10 @@
 
 (define (main)
   (define t (big-bang (make-random-cells)
-                      ;(display-mode 'fullscreen)
+                      (display-mode 'fullscreen)
                       ;(stop-when check-buffer)
                       (on-tick tick)
                       (to-draw draw)))
-  0)
-
-
-;; (for ([i (in-range 10)])
-;;   (time (draw (tick (make-random-cells)))))
+  void)
 
 (main)
