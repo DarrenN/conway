@@ -44,8 +44,8 @@
          [end-x (min XMAX (+ x radius))]
          [start-y (max 0 (- y radius))]
          [end-y (min YMAX (+ y radius))])
-    (for/vector ([row (in-range HEIGHT-RANGE)])
-      (for/vector ([col (in-range WIDTH-RANGE)])
+    (for/vector #:length HEIGHT-RANGE ([row (in-range HEIGHT-RANGE)])
+      (for/vector #:length WIDTH-RANGE ([col (in-range WIDTH-RANGE)])
         (cond [(and (and (>= row (- start-y radius))
                          (<= row (+ end-y radius)))
                     (and (>= col (- start-x radius))
@@ -171,9 +171,10 @@
 (define (draw cells)
   (define new-image
     (for/fold ([canvas CANVAS])
-              ([y-index (in-range HEIGHT-RANGE)])
+              ([row (in-vector cells)]
+               [y-index (in-range HEIGHT-RANGE)])
       (place-image
-       (make-row-bitmap (vector-ref cells y-index))
+       (make-row-bitmap row)
        (/ WIDTH 2)
        (+ (* y-index CELL) (/ CELL 2))
        canvas)))
@@ -185,7 +186,8 @@
     [else new-image]))
 
 (define (check-buffer)
-  (equal? (ring-buffer-ref rb 0) (ring-buffer-ref rb 2)))
+  (with-handlers ([exn:fail? (λ (e) #f)])
+    (equal? (ring-buffer-ref rb 0) (ring-buffer-ref rb 2))))
 
 (define (main)
   (define t (big-bang CELLS

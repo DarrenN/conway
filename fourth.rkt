@@ -11,7 +11,7 @@
 (define WIDTH 1020)
 (define HEIGHT 600)
 (define CANVAS (freeze (rectangle WIDTH HEIGHT "solid" "white")))
-(define CELL 15) ;; giant blocks for raspi
+(define CELL 10) ;; giant blocks for raspi
 
 (define WIDTH-RANGE (/ WIDTH CELL))
 (define HEIGHT-RANGE (/ HEIGHT CELL))
@@ -43,8 +43,8 @@
 ;; (-> vector?)
 ;; Pre-load a vector of vectors with ALIVE/DEAD
 (define (make-random-cells)
-  (for/vector ([y Y-AXIS])
-    (for/vector ([x X-AXIS])
+  (for/vector #:length HEIGHT-RANGE ([y Y-AXIS])
+    (for/vector #:length WIDTH-RANGE ([x X-AXIS])
       (if (zero? (modulo (random 11) 10))
           ALIVE DEAD))))
 
@@ -152,11 +152,12 @@
     [else new-image]))
 
 (define (check-buffer cells)
-  (equal? (ring-buffer-ref rb 0) (ring-buffer-ref rb 2)))
+  (with-handlers ([exn:fail? (λ (e) #f)])
+    (equal? (ring-buffer-ref rb 0) (ring-buffer-ref rb 2))))
 
 (define (main)
   (define t (big-bang (make-random-cells)
-                      (display-mode 'fullscreen)
+                      ;(display-mode 'fullscreen)
                       ;(stop-when check-buffer)
                       (on-tick tick)
                       (to-draw draw)))
